@@ -1,5 +1,6 @@
 import sys
 import os
+import shutil
 import subprocess
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -61,88 +62,102 @@ with tab_docs:
 # ---------------------------------------------------------------------------
 with tab_ingest:
     st.subheader("Iniciar ingesta de documentos")
-    st.write(
-        "Execute o pipeline de coleta e indexacao de Atas e Comunicados do COPOM. "
-        "Requer que o `copom-pipeline` esteja instalado e acessivel no PATH."
-    )
 
-    with st.form("ingest_form"):
-        doc_type_option = st.selectbox(
-            "Tipo de documento",
-            options=["Atas e Comunicados", "Atas", "Comunicados"],
+    _pipeline_available = shutil.which("copom-pipeline") is not None
+
+    if not _pipeline_available:
+        st.info(
+            "A ingesta nao pode ser executada a partir desta interface em producao. "
+            "O comando `copom-pipeline` precisa estar instalado localmente."
+        )
+        st.write("**Para atualizar o banco de dados, execute localmente:**")
+        st.code(
+            "cd copom-vector-pipeline\n"
+            "copom-pipeline --doc-type all --from-date 2026-01-01",
+            language="bash",
+        )
+        st.write("Consulte o `DEPLOYMENT.md` do repositorio `copom-vector-pipeline` para instrucoes completas.")
+    else:
+        st.write(
+            "Execute o pipeline de coleta e indexacao de Atas e Comunicados do COPOM. "
+            "Requer que o `copom-pipeline` esteja instalado e acessivel no PATH."
         )
 
-        date_from_ingest = st.date_input(
-            "Data inicial",
-            help="Data de inicio do periodo de coleta.",
-        )
-
-        date_to_ingest = st.date_input(
-            "Data final (opcional)",
-            value=None,
-            help="Data de fim do periodo de coleta. Deixe em branco para coletar ate hoje.",
-        )
-
-        submit_ingest = st.form_submit_button("Iniciar Ingesta", type="primary")
-
-    if submit_ingest:
-        # Map UI label to CLI arg
-        doc_type_map = {
-            "Atas e Comunicados": "all",
-            "Atas": "ata",
-            "Comunicados": "comunicado",
-        }
-        doc_type_arg = doc_type_map[doc_type_option]
-
-        pipeline_dir_env = os.environ.get("COPOM_PIPELINE_DIR", "../copom-vector-pipeline")
-        # Resolve relative to repo root
-        _repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        pipeline_dir = os.path.normpath(os.path.join(_repo_root, pipeline_dir_env))
-
-        cmd = [
-            "copom-pipeline",
-            "--doc-type", doc_type_arg,
-            "--from-date", date_from_ingest.isoformat(),
-        ]
-        if date_to_ingest:
-            cmd += ["--to-date", date_to_ingest.isoformat()]
-
-        st.info(f"Executando: `{' '.join(cmd)}`")
-        st.info(f"Diretorio: `{pipeline_dir}`")
-
-        try:
-            proc = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,  # merge stderr into stdout
-                text=True,
-                cwd=pipeline_dir,
-                bufsize=1,
+    if _pipeline_available:
+        with st.form("ingest_form"):
+            doc_type_option = st.selectbox(
+                "Tipo de documento",
+                options=["Atas e Comunicados", "Atas", "Comunicados"],
             )
-        except FileNotFoundError:
-            st.error(
-                "Comando `copom-pipeline` nao encontrado. "
-                "Verifique se o pacote esta instalado e se o PATH esta correto."
+
+            date_from_ingest = st.date_input(
+                "Data inicial",
+                help="Data de inicio do periodo de coleta.",
             )
-            proc = None
 
-        if proc is not None:
-            st.subheader("Log em tempo real")
-            log_area = st.empty()
-            lines: list[str] = []
+            date_to_ingest = st.date_input(
+                "Data final (opcional)",
+                value=None,
+                help="Data de fim do periodo de coleta. Deixe em branco para coletar ate hoje.",
+            )
 
-            for line in proc.stdout:
-                lines.append(line.rstrip())
-                # Keep last 100 lines to avoid the box growing forever
-                visible = lines[-100:]
-                log_area.code("\n".join(visible), language="text")
+            submit_ingest = st.form_submit_button("Iniciar Ingesta", type="primary")
 
-            proc.wait()
+        if submit_ingest:
+            doc_type_map = {
+                "Atas e Comunicados": "all",
+                "Atas": "ata",
+                "Comunicados": "comunicado",
+            }
+            doc_type_arg = doc_type_map[doc_type_option]
 
-            if proc.returncode == 0:
-                st.success(f"Pipeline concluido com sucesso (codigo de saida: {proc.returncode}).")
-            else:
-                st.error(f"Pipeline encerrou com erro (codigo de saida: {proc.returncode}).")
+            pipeline_dir_env = os.environ.get("COPOM_PIPELINE_DIR", "../copom-vector-pipeline")
+            _repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            pipeline_dir = os.path.normpath(os.path.join(_repo_root, pipeline_dir_env))
+
+            cmd = [
+                "copom-pipeline",
+                "--doc-type", doc_type_arg,
+                "--from-date", date_from_ingest.isoformat(),
+            ]
+            if date_to_ingest:
+                cmd += ["--to-date", date_to_ingest.isoformat()]
+
+            st.info(f"Executando: `{' '.join(cmd)}`")
+            st.info(f"Diretorio: `{pipeline_dir}`")
+
+            try:
+                proc = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    cwd=pipeline_dir,
+                    bufsize=1,
+                )
+            except FileNotFoundError:
+                st.error(
+                    "Comando `copom-pipeline` nao encontrado. "
+                    "Verifique se o pacote esta instalado e se o PATH esta correto."
+                )
+                proc = None
+
+            if proc is not None:
+                st.subheader("Log em tempo real")
+                log_area = st.empty()
+                lines: list[str] = []
+
+                for line in proc.stdout:
+                    lines.append(line.rstrip())
+                    visible = lines[-100:]
+                    log_area.code("\n".join(visible), language="text")
+
+                proc.wait()
+
+                if proc.returncode == 0:
+                    st.success(f"Pipeline concluido com sucesso (codigo de saida: {proc.returncode}).")
+                else:
+                    st.error(f"Pipeline encerrou com erro (codigo de saida: {proc.returncode}).")
 
 # ---------------------------------------------------------------------------
 # Tab 3 — Banco
