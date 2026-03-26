@@ -61,7 +61,14 @@ def api_post(path: str, body: dict) -> dict | list:
         st.error("A requisicao excedeu o tempo limite (120s). O modelo pode estar sobrecarregado — tente novamente.")
         st.stop()
     except httpx.HTTPStatusError as e:
-        st.error(f"Erro na API: {e.response.status_code} — {e.response.text}")
+        try:
+            detail = e.response.json().get("detail", e.response.text)
+        except Exception:
+            detail = e.response.text
+        if e.response.status_code == 503:
+            st.warning(detail)
+        else:
+            st.error(f"Erro na API ({e.response.status_code}): {detail}")
         st.stop()
     except Exception as e:
         st.error(f"Erro inesperado: {e}")
