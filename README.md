@@ -1,82 +1,82 @@
 # copom-streamlit
 
-Interface web em [Streamlit](https://streamlit.io) para o sistema **COPOM RAG** — permite fazer perguntas em linguagem natural sobre Atas e Comunicados do Comitê de Política Monetária do Banco Central do Brasil, com respostas geradas por LLM e citações diretas aos documentos originais.
+[Streamlit](https://streamlit.io) web interface for the **COPOM RAG** system — ask questions in natural language about Minutes and Communications from Brazil's Monetary Policy Committee (Comitê de Política Monetária do Banco Central do Brasil), with LLM-generated answers and inline citations to the original documents.
 
 Demo: [copom-rag.streamlit.app](https://copom-rag.streamlit.app)
 
 ---
 
-## Funcionalidades
+## Features
 
-- **Perguntas em linguagem natural** sobre atas e comunicados do COPOM
-- **Filtros por tipo de documento** (Ata / Comunicado) e **período**
-- **Respostas com citações inline** `[1][2]` vinculadas aos trechos originais
-- **Referências detalhadas**: título, data, tipo, excerpt e link para o PDF
-- **Página Admin** com lista de documentos, formulário de ingestion e estatísticas do banco
-- **Página Inicio** com métricas ao vivo e descrição da arquitetura do sistema
+- **Natural language Q&A** over COPOM minutes and communications
+- **Filters by document type** (Minutes / Communications) and **date range**
+- **Inline citations** `[1][2]` linked to the original source excerpts
+- **Detailed references**: title, date, type, excerpt, and link to the PDF
+- **Admin page** with document list, ingestion form, and database stats
+- **Home page** with live metrics and system architecture overview
 
 ---
 
-## Arquitetura
+## Architecture
 
-Este projeto é a camada de interface do ecossistema COPOM RAG:
+This project is the interface layer of the COPOM RAG ecosystem:
 
 ```
 Banco Central (PDFs)
         │
         ▼
-copom-vector-pipeline   ← ingestão, chunking, embeddings
+copom-vector-pipeline   ← ingestion, chunking, embeddings
         │
         ▼
-PostgreSQL + pgvector   ← armazenamento vetorial (Neon)
+PostgreSQL + pgvector   ← vector storage (Neon)
         │
         ▼
-copom-rag-api           ← busca semântica + geração via Gemini (Render)
+copom-rag-api           ← semantic search + generation via Gemini (Render)
         │
         ▼
-copom-streamlit         ← interface web (Streamlit Cloud)  ← você está aqui
+copom-streamlit         ← web interface (Streamlit Cloud)  ← you are here
 ```
 
 ---
 
-## Páginas
+## Pages
 
-### Inicio
-- Métricas ao vivo: total de documentos, atas, comunicados e período coberto
-- Descrição do pipeline RAG em 3 etapas
-- Detalhes da stack técnica e diagrama de arquitetura
+### Home
+- Live metrics: total documents, minutes, communications, and date range covered
+- RAG pipeline description in 3 steps
+- Tech stack details and architecture diagram
 
-### Perguntas
-- Input de pergunta com filtros na sidebar (tipo de documento, data inicial/final)
-- Resposta em markdown com citações numeradas
-- Lista de referências com links para os PDFs originais
-- Metadados: tempo de processamento e número de trechos utilizados
+### Questions
+- Question input with sidebar filters (document type, start/end date)
+- Markdown answer with numbered citations
+- Reference list with links to the original PDFs
+- Metadata: processing time and number of chunks used
 
-### Administração
-- **Documentos**: tabela de todos os documentos indexados com link para o PDF
-- **Ingerir**: formulário para iniciar ingestion (local) com streaming de logs em tempo real
-- **Banco**: estatísticas do banco (total, período, distribuição por tipo)
+### Admin
+- **Documents**: table of all indexed documents with links to their PDFs
+- **Ingest**: form to trigger ingestion locally with real-time log streaming
+- **Database**: stats (total, date range, distribution by type)
 
 ---
 
 ## Stack
 
-| Componente | Tecnologia |
+| Component | Technology |
 |-----------|-----------|
 | Interface | Streamlit >= 1.35 |
 | HTTP client | httpx >= 0.27 |
-| Configuração | python-dotenv |
-| Dados | pandas |
+| Configuration | python-dotenv |
+| Data | pandas |
 | Python | >= 3.11 |
 
 ---
 
-## Como rodar localmente
+## Running locally
 
-### Pré-requisitos
+### Prerequisites
 
 - Python 3.11+
-- [`copom-rag-api`](https://github.com/mateusfg7/copom-rag-api) rodando (local ou remoto)
+- [`copom-rag-api`](https://github.com/mateusfg7/copom-rag-api) running (local or remote)
 
 ### Setup
 
@@ -87,47 +87,47 @@ cd copom-streamlit
 pip install -r requirements.txt
 
 cp .env.example .env
-# edite .env com a URL da API
+# edit .env with the API URL
 ```
 
-### Configuração (`.env`)
+### Environment variables (`.env`)
 
 ```env
-COPOM_API_URL=http://localhost:8001   # URL da copom-rag-api
-COPOM_API_KEY=                        # API Key (deixe vazio se não usar)
-COPOM_PIPELINE_DIR=../copom-vector-pipeline  # caminho do pipeline (ingestion local)
+COPOM_API_URL=http://localhost:8001          # copom-rag-api base URL
+COPOM_API_KEY=                               # API key (leave empty to disable auth)
+COPOM_PIPELINE_DIR=../copom-vector-pipeline  # path to the pipeline (local ingestion)
 ```
 
-### Executar
+### Run
 
 ```bash
 streamlit run app.py
 ```
 
-A aplicação estará disponível em `http://localhost:8501`.
+The app will be available at `http://localhost:8501`.
 
 ---
 
 ## Deployment (Streamlit Cloud)
 
-A aplicação faz deploy automático no [Streamlit Community Cloud](https://streamlit.io/cloud) a cada push para `main`.
+The app auto-deploys on [Streamlit Community Cloud](https://streamlit.io/cloud) on every push to `main`.
 
-Configure os secrets no dashboard do Streamlit Cloud:
+Configure secrets in the Streamlit Cloud dashboard:
 
 ```toml
 COPOM_API_URL = "https://copom-rag-api.onrender.com"
 COPOM_API_KEY = ""
 ```
 
-> O Streamlit Cloud lê os secrets no formato TOML, não `.env`.
+> Streamlit Cloud reads secrets in TOML format, not `.env`.
 
-Veja [DEPLOYMENT.md](DEPLOYMENT.md) para o guia completo.
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the full guide.
 
 ---
 
-## Projetos relacionados
+## Related projects
 
-- [copom-rag-api](https://github.com/mateusfg7/copom-rag-api) — API RAG com FastAPI + Gemini + pgvector
-- [copom-vector-pipeline](https://github.com/mateusfg7/copom-vector-pipeline) — pipeline de ingestão de PDFs do COPOM (parte deste ecossistema)
+- [copom-rag-api](https://github.com/mateusfg7/copom-rag-api) — RAG API with FastAPI + Gemini + pgvector
+- [copom-vector-pipeline](https://github.com/mateusfg7/copom-vector-pipeline) — COPOM PDF ingestion pipeline (part of this ecosystem)
 
-> A página **Admin** do app permite disparar o `copom-vector-pipeline` localmente via subprocess, com streaming de logs em tempo real. Em produção, o pipeline precisa ser executado manualmente no ambiente local com acesso ao banco Neon.
+> The **Admin** page can trigger `copom-vector-pipeline` locally via subprocess with real-time log streaming. In production, the pipeline must be run manually in a local environment with access to the Neon database.
