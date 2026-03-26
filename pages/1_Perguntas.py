@@ -67,37 +67,34 @@ if ask_button:
         with st.container(border=True):
             st.markdown(result.get("answer", "Sem resposta."))
 
-        # --- Sources ---
+        # --- References ---
         sources = result.get("sources", [])
         if sources:
-            st.subheader("Fontes consultadas")
+            st.subheader("Referencias")
             for i, source in enumerate(sources, start=1):
                 title = source.get("title") or f"Documento {i}"
                 meeting_date = source.get("meeting_date", "")
                 doc_type = source.get("doc_type", "")
                 pdf_url = source.get("url", "")
-                excerpt = source.get("excerpt") or source.get("text", "")
+                excerpt = source.get("excerpt") or ""
 
-                label = f"{i}. {title}"
-                if meeting_date:
-                    label += f"  —  {meeting_date}"
+                # Line: [1] Title — date [type]   (PDF link)
+                meta = f"{meeting_date}" if meeting_date else ""
                 if doc_type:
-                    label += f"  [{doc_type}]"
+                    meta += f" [{doc_type}]" if meta else f"[{doc_type}]"
 
-                with st.expander(label):
-                    cols = st.columns([2, 1])
-                    with cols[0]:
-                        if meeting_date:
-                            st.write(f"**Reuniao:** {meeting_date}")
-                        if doc_type:
-                            st.write(f"**Tipo:** {doc_type}")
-                    with cols[1]:
-                        if pdf_url:
-                            st.markdown(f"[Abrir PDF]({pdf_url})")
+                ref_line = f"**[{i}]** {title}"
+                if meta:
+                    ref_line += f" — {meta}"
 
+                cols = st.columns([5, 1])
+                with cols[0]:
+                    st.markdown(ref_line)
                     if excerpt:
-                        st.divider()
-                        st.markdown(f"*{excerpt}*")
+                        st.caption(excerpt[:200] + ("..." if len(excerpt) > 200 else ""))
+                with cols[1]:
+                    if pdf_url:
+                        st.markdown(f"[Abrir PDF]({pdf_url})")
 
         # --- Metadata ---
         processing_time = result.get("processing_time_seconds")
