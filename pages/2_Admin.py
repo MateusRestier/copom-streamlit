@@ -110,34 +110,39 @@ with tab_ingest:
         st.info(f"Executando: `{' '.join(cmd)}`")
         st.info(f"Diretorio: `{pipeline_dir}`")
 
-        with st.spinner("Executando pipeline..."):
-            try:
-                proc = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    cwd=pipeline_dir,
-                )
-            except FileNotFoundError:
-                st.error(
-                    "Comando `copom-pipeline` nao encontrado. "
-                    "Verifique se o pacote esta instalado e se o PATH esta correto."
-                )
-                proc = None
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,  # merge stderr into stdout
+                text=True,
+                cwd=pipeline_dir,
+                bufsize=1,
+            )
+        except FileNotFoundError:
+            st.error(
+                "Comando `copom-pipeline` nao encontrado. "
+                "Verifique se o pacote esta instalado e se o PATH esta correto."
+            )
+            proc = None
 
         if proc is not None:
+            st.subheader("Log em tempo real")
+            log_area = st.empty()
+            lines: list[str] = []
+
+            for line in proc.stdout:
+                lines.append(line.rstrip())
+                # Keep last 100 lines to avoid the box growing forever
+                visible = lines[-100:]
+                log_area.code("\n".join(visible), language="text")
+
+            proc.wait()
+
             if proc.returncode == 0:
                 st.success(f"Pipeline concluido com sucesso (codigo de saida: {proc.returncode}).")
             else:
                 st.error(f"Pipeline encerrou com erro (codigo de saida: {proc.returncode}).")
-
-            if proc.stdout:
-                st.subheader("Saida")
-                st.code(proc.stdout, language="text")
-
-            if proc.stderr:
-                st.subheader("Erros / Avisos")
-                st.code(proc.stderr, language="text")
 
 # ---------------------------------------------------------------------------
 # Tab 3 — Banco
