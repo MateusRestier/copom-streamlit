@@ -183,6 +183,40 @@ st.code(
 st.divider()
 
 # ---------------------------------------------------------------------------
+# Disponibilidade
+# ---------------------------------------------------------------------------
+st.subheader("Disponibilidade")
+
+st.markdown(
+    """
+Todos os serviços rodam em **free tier**. Duas estratégias evitam interrupções por inatividade:
+"""
+)
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown("**Render — copom-rag-api**")
+    st.markdown(
+        """
+O Render encerra containers após **15 min sem requisição**. Um monitor do **UptimeRobot**
+faz ping no endpoint `/health` a cada 14 minutos, mantendo a API sempre ativa.
+        """
+    )
+
+with col2:
+    st.markdown("**Streamlit Community Cloud**")
+    st.markdown(
+        """
+O Streamlit coloca o app para dormir após **7 dias sem visitante**. Um workflow do
+**GitHub Actions** (`keep-alive.yml`) envia uma requisição HTTP ao app três vezes ao dia
+— 06:00, 12:00 e 16:00 BRT — impedindo o sleep automático.
+        """
+    )
+
+st.divider()
+
+# ---------------------------------------------------------------------------
 # Repositórios
 # ---------------------------------------------------------------------------
 st.subheader("Repositorios")

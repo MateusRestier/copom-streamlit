@@ -79,6 +79,43 @@ If the app is stuck or behaving unexpectedly:
 
 ---
 
+## Keep-Alive Strategy
+
+### Problem
+
+Both free-tier services sleep on inactivity:
+
+| Service | Sleep trigger | Wake-up cost |
+|---------|--------------|--------------|
+| Streamlit Community Cloud | 7 days without a visitor | ~30 s (user sees a "wake up" button) |
+| Render (copom-rag-api) | 15 min without a request | 30–60 s cold start on first request |
+
+### Solution
+
+**Render** is kept alive by **UptimeRobot**, which pings the `/health` endpoint every 14 minutes.
+
+**Streamlit** is kept alive by a **GitHub Actions scheduled workflow** (`.github/workflows/keep-alive.yml`)
+that sends an HTTP GET to the app URL three times a day:
+
+| Trigger | BRT | UTC cron |
+|---------|-----|----------|
+| Morning | 06:00 | `0 9 * * *` |
+| Afternoon | 12:00 | `0 15 * * *` |
+| Evening | 16:00 | `0 19 * * *` |
+
+The workflow uses `curl` with `-L` (follow redirects) and `--retry 5` to tolerate transient
+wake-up delays. It reads the app URL from the repository secret `STREAMLIT_URL`.
+
+### Required GitHub Secret
+
+| Secret | Value |
+|--------|-------|
+| `STREAMLIT_URL` | `https://copom-rag.streamlit.app` |
+
+Set it at: **GitHub → repo Settings → Secrets and variables → Actions → New repository secret**.
+
+---
+
 ## Troubleshooting
 
 ### "Nao foi possivel conectar a API"
