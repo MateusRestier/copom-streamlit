@@ -19,6 +19,5 @@ jobs:
 
       - name: Pinga o Streamlit
         run: |
-          curl --retry 5 --retry-delay 30 --retry-all-errors \
-               --max-time 60 -f -L \
+          curl --max-time 30 --max-redirs 3 \
                "${{ secrets.STREAMLIT_URL }}"
