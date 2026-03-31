@@ -2,8 +2,8 @@ name: Keep Alive — Streamlit + API
 
 on:
   schedule:
-    - cron: '0 9 * * *'   # 06:00 BRT (UTC-3)
-    - cron: '0 15 * * *'  # 12:00 BRT (UTC-3)
+    - cron: '0 3 * * *'   # 00:00 BRT (UTC-3)
+    - cron: '0 11 * * *'  # 08:00 BRT (UTC-3)
     - cron: '0 19 * * *'  # 16:00 BRT (UTC-3)
   workflow_dispatch:
 
