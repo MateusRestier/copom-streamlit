@@ -87,32 +87,40 @@ Both free-tier services sleep on inactivity:
 
 | Service | Sleep trigger | Wake-up cost |
 |---------|--------------|--------------|
-| Streamlit Community Cloud | 7 days without a visitor | ~30 s (user sees a "wake up" button) |
+| Streamlit Community Cloud | **12 h** without a visitor | ~30 s (user sees a "wake up" button) |
 | Render (copom-rag-api) | 15 min without a request | 30–60 s cold start on first request |
 
 ### Solution
 
 **Render** is kept alive by **UptimeRobot**, which pings the `/health` endpoint every 14 minutes.
 
-**Streamlit** is kept alive by a **GitHub Actions scheduled workflow** (`.github/workflows/keep-alive.yml`)
-that sends an HTTP GET to the app URL three times a day:
+**Both services** are additionally covered by a **GitHub Actions scheduled workflow**
+(`.github/workflows/keep-alive.yml`) that pings the Render API and the Streamlit app
+**6 times a day, every 4 hours** — well within the 12-hour sleep window even accounting
+for the natural scheduler delay (~30 min) of GitHub Actions:
 
-| Trigger | BRT | UTC cron |
-|---------|-----|----------|
-| Morning | 06:00 | `0 9 * * *` |
-| Afternoon | 12:00 | `0 15 * * *` |
-| Evening | 16:00 | `0 19 * * *` |
+| BRT | UTC cron |
+|-----|----------|
+| 00:00 | `0 3 * * *` |
+| 04:00 | `0 7 * * *` |
+| 08:00 | `0 11 * * *` |
+| 12:00 | `0 15 * * *` |
+| 16:00 | `0 19 * * *` |
+| 20:00 | `0 23 * * *` |
 
-The workflow uses `curl` with `-L` (follow redirects) and `--retry 5` to tolerate transient
-wake-up delays. It reads the app URL from the repository secret `STREAMLIT_URL`.
+The Streamlit ping uses `curl --max-redirs 3` (no `-L`) to avoid the infinite redirect loop
+that Streamlit triggers on headless requests. The Render ping uses `curl -f --max-time 90`
+against the `/health` endpoint. Since the repo is public, GitHub Actions minutes are free
+and unlimited.
 
-### Required GitHub Secret
+### Required GitHub Secrets
 
 | Secret | Value |
 |--------|-------|
 | `STREAMLIT_URL` | `https://copom-rag.streamlit.app` |
+| `RENDER_URL` | `https://copom-rag-api.onrender.com` |
 
-Set it at: **GitHub → repo Settings → Secrets and variables → Actions → New repository secret**.
+Set them at: **GitHub → repo Settings → Secrets and variables → Actions → New repository secret**.
 
 ---
 
