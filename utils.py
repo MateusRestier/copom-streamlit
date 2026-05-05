@@ -26,25 +26,28 @@ def _headers() -> dict:
     return {}
 
 
-def api_get(path: str) -> dict | list:
-    """Perform a GET request to the COPOM API. Raises st.stop() on error."""
+def api_get(path: str, timeout: float = 60.0, retries: int = 1) -> dict | list:
+    """Perform a GET request to the COPOM API. Retries once on timeout (handles Render cold start)."""
     url = f"{get_api_url()}{path}"
-    try:
-        response = httpx.get(url, headers=_headers(), timeout=10.0)
-        response.raise_for_status()
-        return response.json()
-    except httpx.ConnectError:
-        st.error(f"Nao foi possivel conectar a API em {get_api_url()}. Verifique se o servidor esta rodando.")
-        st.stop()
-    except httpx.TimeoutException:
-        st.error("A requisicao excedeu o tempo limite. Tente novamente.")
-        st.stop()
-    except httpx.HTTPStatusError as e:
-        st.error(f"Erro na API: {e.response.status_code} — {e.response.text}")
-        st.stop()
-    except Exception as e:
-        st.error(f"Erro inesperado: {e}")
-        st.stop()
+    for attempt in range(retries + 1):
+        try:
+            response = httpx.get(url, headers=_headers(), timeout=timeout)
+            response.raise_for_status()
+            return response.json()
+        except httpx.TimeoutException:
+            if attempt < retries:
+                continue
+            st.error("A requisicao excedeu o tempo limite. Tente novamente.")
+            st.stop()
+        except httpx.ConnectError:
+            st.error(f"Nao foi possivel conectar a API em {get_api_url()}. Verifique se o servidor esta rodando.")
+            st.stop()
+        except httpx.HTTPStatusError as e:
+            st.error(f"Erro na API: {e.response.status_code} — {e.response.text}")
+            st.stop()
+        except Exception as e:
+            st.error(f"Erro inesperado: {e}")
+            st.stop()
 
 
 def api_post(path: str, body: dict) -> dict | list:

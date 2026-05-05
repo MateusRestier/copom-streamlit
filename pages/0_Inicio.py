@@ -30,7 +30,8 @@ st.divider()
 # ---------------------------------------------------------------------------
 st.subheader("Base de conhecimento")
 
-data = api_get("/documents")
+with st.spinner("Carregando base de conhecimento..."):
+    data = api_get("/documents")
 documents = data if isinstance(data, list) else data.get("documents", [])
 
 total = len(documents)
